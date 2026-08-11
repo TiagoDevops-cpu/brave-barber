@@ -1,0 +1,6 @@
+{
+  "name": "Brave",
+  "description": "Sistema completo de agendamento online para barbearia com portal de clientes e painel administrativo do barbeiro.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

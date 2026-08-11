@@ -1,0 +1,25 @@
+{
+  "id": "shop-1",
+  "name": "Bryan Barber Shop",
+  "slogan": "Estilo, Tradição e Excelência em Cortes Mascullinos",
+  "address": "R. Pontalina, 722 - Vila Santo Eugenio, Campo Grande - MS",
+  "phone": "(67) 9310-6619",
+  "whatsapp": "556793106619",
+  "instagram": "@obryanbarbeiro_",
+  "openingHours": "Terça a Sábado: 08:00 às 19:30",
+  "workingDays": [
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "startHour": "08:00",
+  "endHour": "19:30",
+  "slotIntervalMinutes": 20,
+  "heroVideoUrl": "https://assets.mixkit.co/videos/preview/mixkit-barber-cutting-the-hair-of-a-man-40899-large.mp4",
+  "heroVideoTitle": "Mestres na Arte da Barbearia",
+  "heroVideoSubtitle": "Confira a transformação e a precisão do nosso trabalho exclusivo.",
+  "aboutText": "Na Bryan Barber Shop, cada corte é planejado nos mínimos detalhes para valorizar seu estilo e personalidade. Oferecemos um ambiente exclusivo, climatizado, com café gourmet, cerveja gelada e os melhores profissionais da região.",
+  "googleCalendarConnected": true
+}
