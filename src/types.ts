@@ -9,7 +9,7 @@ export interface ShopConfig {
   openingHours: string;
   workingDays: number[]; // 0 = Sun, 1 = Mon, 2 = Tue, 3 = Wed, 4 = Thu, 5 = Fri, 6 = Sat
   startHour: string; // "08:00"
-  endHour: string;   // "20:00"
+  endHour: string; // "20:00"
   slotIntervalMinutes: number; // 20
   heroVideoUrl: string;
   heroVideoTitle: string;
@@ -22,9 +22,9 @@ export interface ServiceItem {
   id: string;
   name: string;
   price: number | null; // null means 'Consultar'
-  priceType: 'fixed' | 'consult';
+  priceType: "fixed" | "consult";
   durationMinutes: number;
-  category: 'corte' | 'barba' | 'combo' | 'outros';
+  category: "corte" | "barba" | "combo" | "outros";
   description?: string;
   active?: boolean;
 }
@@ -48,7 +48,7 @@ export interface Appointment {
   totalPrice: number | null;
   priceDisplay: string;
   totalDurationMinutes: number;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: "pending" | "completed" | "cancelled";
   notes?: string;
   createdAt: string;
   googleCalendarLink?: string;
@@ -57,7 +57,7 @@ export interface Appointment {
 export interface GalleryItem {
   id: string;
   title: string;
-  type: 'image' | 'video';
+  type: "image" | "video";
   url: string;
   thumbnailUrl?: string;
   isFeaturedHero: boolean;

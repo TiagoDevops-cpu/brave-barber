@@ -1,7 +1,17 @@
-import React, { useState } from 'react';
-import { X, Lock, Mail, Phone, User, Shield, Sparkles, ArrowRight } from 'lucide-react';
-import { ShopConfig, AuthResponse } from '../types';
-import { api } from '../lib/api';
+import {
+  ArrowRight,
+  Lock,
+  Mail,
+  Phone,
+  Shield,
+  Sparkles,
+  User,
+  X,
+} from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { localStore } from "../lib/storage";
+import type { AuthResponse, ShopConfig } from "../types";
 
 interface BarberAuthModalProps {
   config: ShopConfig;
@@ -16,82 +26,82 @@ export const BarberAuthModal: React.FC<BarberAuthModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [tab, setTab] = useState<'login' | 'register'>('login');
-  
+  const [tab, setTab] = useState<"login" | "register">("login");
+
   // Login Fields
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
 
   // Register Fields
-  const [regName, setRegName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPhone, setRegPhone] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [regName, setRegName] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regConfirmPassword, setRegConfirmPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   if (!isOpen) return null;
 
-  const handleDemoLogin = async () => {
+  const handleDemoLogin = () => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      const res = await api.loginBarber('barbeiro@brave.com', '123456');
+      const res = localStore.loginBarber("barbeiro@brave.com", "123456");
       onSuccess(res);
     } catch (err: any) {
-      setError(err.message || 'Erro ao entrar com conta de demonstração.');
+      setError(err.message || "Erro ao entrar com conta de demonstração.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
+  const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail || !loginPassword) {
-      setError('Informe o e-mail e a senha.');
+      setError("Informe o e-mail e a senha.");
       return;
     }
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      const res = await api.loginBarber(loginEmail, loginPassword);
+      const res = localStore.loginBarber(loginEmail, loginPassword);
       onSuccess(res);
     } catch (err: any) {
-      setError(err.message || 'Erro no login.');
+      setError(err.message || "Erro no login.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
+  const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!regEmail || !regPhone || !regPassword) {
-      setError('Preencha todos os campos obrigatórios.');
+      setError("Preencha todos os campos obrigatórios.");
       return;
     }
     if (regPassword !== regConfirmPassword) {
-      setError('As senhas não coincidem.');
+      setError("As senhas não coincidem.");
       return;
     }
     if (regPassword.length < 4) {
-      setError('A senha deve ter pelo menos 4 caracteres.');
+      setError("A senha deve ter pelo menos 4 caracteres.");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      const res = await api.registerBarber({
-        name: regName || 'Barbeiro',
+      const res = localStore.registerBarber({
+        name: regName || "Barbeiro",
         email: regEmail,
         phone: regPhone,
         password: regPassword,
       });
       onSuccess(res);
     } catch (err: any) {
-      setError(err.message || 'Erro no cadastro.');
+      setError(err.message || "Erro no cadastro.");
     } finally {
       setLoading(false);
     }
@@ -126,17 +136,27 @@ export const BarberAuthModal: React.FC<BarberAuthModalProps> = ({
           {/* Login / Register Tabs */}
           <div className="grid grid-cols-2 mt-5 p-1 bg-zinc-950 rounded-xl border border-zinc-800">
             <button
-              onClick={() => { setTab('login'); setError(''); }}
+              onClick={() => {
+                setTab("login");
+                setError("");
+              }}
               className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                tab === 'login' ? 'bg-amber-500 text-zinc-950 shadow' : 'text-zinc-400 hover:text-zinc-200'
+                tab === "login"
+                  ? "bg-amber-500 text-zinc-950 shadow"
+                  : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
               Entrar
             </button>
             <button
-              onClick={() => { setTab('register'); setError(''); }}
+              onClick={() => {
+                setTab("register");
+                setError("");
+              }}
               className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                tab === 'register' ? 'bg-amber-500 text-zinc-950 shadow' : 'text-zinc-400 hover:text-zinc-200'
+                tab === "register"
+                  ? "bg-amber-500 text-zinc-950 shadow"
+                  : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
               Criar Conta
@@ -170,7 +190,7 @@ export const BarberAuthModal: React.FC<BarberAuthModalProps> = ({
           </div>
 
           {/* LOGIN FORM */}
-          {tab === 'login' && (
+          {tab === "login" && (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
@@ -211,13 +231,13 @@ export const BarberAuthModal: React.FC<BarberAuthModalProps> = ({
                 disabled={loading}
                 className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2"
               >
-                {loading ? 'Entrando...' : 'Acessar Painel →'}
+                {loading ? "Entrando..." : "Acessar Painel →"}
               </button>
             </form>
           )}
 
           {/* REGISTER FORM */}
-          {tab === 'register' && (
+          {tab === "register" && (
             <form onSubmit={handleRegisterSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
@@ -304,7 +324,7 @@ export const BarberAuthModal: React.FC<BarberAuthModalProps> = ({
                 disabled={loading}
                 className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2"
               >
-                {loading ? 'Cadastrando...' : 'Criar Minha Conta →'}
+                {loading ? "Cadastrando..." : "Criar Minha Conta →"}
               </button>
             </form>
           )}

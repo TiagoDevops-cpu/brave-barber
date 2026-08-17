@@ -1,22 +1,23 @@
-import React, { useState, useEffect } from 'react';
 import {
-  X,
+  AlertCircle,
   Calendar as CalendarIcon,
-  Clock,
+  CalendarPlus,
+  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  User,
+  Clock,
+  ExternalLink,
+  MessageSquare,
   Phone,
   Scissors,
-  Check,
-  CalendarPlus,
-  MessageSquare,
-  AlertCircle,
-  ExternalLink,
-} from 'lucide-react';
-import { ShopConfig, ServiceItem, Customer, Appointment } from '../types';
-import { api } from '../lib/api';
+  User,
+  X,
+} from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { localStore } from "../lib/storage";
+import type { Appointment, Customer, ServiceItem, ShopConfig } from "../types";
 
 interface BookingModalProps {
   config: ShopConfig;
@@ -39,21 +40,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 }) => {
   // Wizard Steps: 1 = Services, 2 = Date (Calendar), 3 = Time, 4 = Confirmation Summary, 5 = Success
   const [step, setStep] = useState<number>(1);
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(initialSelectedServiceIds);
-  const [selectedDate, setSelectedDate] = useState<string>(''); // YYYY-MM-DD
-  const [selectedTime, setSelectedTime] = useState<string>(''); // HH:MM
-  const [notes, setNotes] = useState<string>('');
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
+    initialSelectedServiceIds,
+  );
+  const [selectedDate, setSelectedDate] = useState<string>(""); // YYYY-MM-DD
+  const [selectedTime, setSelectedTime] = useState<string>(""); // HH:MM
+  const [notes, setNotes] = useState<string>("");
 
   // Calendar State
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState<boolean>(false);
-  const [slotsReason, setSlotsReason] = useState<string>('');
+  const [slotsReason, setSlotsReason] = useState<string>("");
 
   // Submission State
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
-  const [createdAppointment, setCreatedAppointment] = useState<Appointment | null>(null);
+  const [error, setError] = useState<string>("");
+  const [createdAppointment, setCreatedAppointment] =
+    useState<Appointment | null>(null);
 
   useEffect(() => {
     if (initialSelectedServiceIds.length > 0) {
@@ -65,23 +69,32 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   useEffect(() => {
     if (!selectedDate) return;
 
-    const chosenServices = services.filter((s) => selectedServiceIds.includes(s.id));
-    const totalDuration = chosenServices.reduce((acc, s) => acc + (s.durationMinutes || 20), 0) || 20;
+    const chosenServices = services.filter((s) =>
+      selectedServiceIds.includes(s.id),
+    );
+    const totalDuration =
+      chosenServices.reduce((acc, s) => acc + (s.durationMinutes || 20), 0) ||
+      20;
 
     setSlotsLoading(true);
-    setSlotsReason('');
+    setSlotsReason("");
 
-    api.getAvailableSlots(selectedDate, totalDuration)
-      .then((res) => {
+    const loadSlots = async () => {
+      try {
+        const res = await localStore.getAvailableSlots(
+          selectedDate,
+          totalDuration,
+        );
         setAvailableSlots(res.availableSlots || []);
         if (res.reason) setSlotsReason(res.reason);
-      })
-      .catch((err) => {
-        setError('Erro ao carregar horários disponíveis.');
-      })
-      .finally(() => {
+      } catch (err) {
+        setError("Erro ao carregar horários disponíveis.");
+      } finally {
         setSlotsLoading(false);
-      });
+      }
+    };
+
+    void loadSlots();
   }, [selectedDate, selectedServiceIds, services]);
 
   if (!isOpen) return null;
@@ -97,13 +110,18 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   // Selected Services Summary Calculations
-  const selectedServicesList = services.filter((s) => selectedServiceIds.includes(s.id));
-  const totalDurationMinutes = selectedServicesList.reduce((acc, s) => acc + (s.durationMinutes || 0), 0);
+  const selectedServicesList = services.filter((s) =>
+    selectedServiceIds.includes(s.id),
+  );
+  const totalDurationMinutes = selectedServicesList.reduce(
+    (acc, s) => acc + (s.durationMinutes || 0),
+    0,
+  );
 
   let hasConsult = false;
   let totalPriceFixed = 0;
   selectedServicesList.forEach((s) => {
-    if (s.priceType === 'consult' || s.price === null) {
+    if (s.priceType === "consult" || s.price === null) {
       hasConsult = true;
     } else {
       totalPriceFixed += s.price;
@@ -117,18 +135,18 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 = Sun
 
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toISOString().split("T")[0];
 
   const handleDateSelect = (dayNum: number) => {
-    const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+    const formattedDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
     setSelectedDate(formattedDate);
-    setSelectedTime(''); // Reset time when date changes
+    setSelectedTime(""); // Reset time when date changes
   };
 
   const isDayDisabled = (dayNum: number) => {
     const dateCheck = new Date(year, month, dayNum);
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-    
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+
     // Past dates
     if (dateStr < todayStr) return true;
 
@@ -141,19 +159,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleConfirmAppointment = async () => {
     if (!customer) {
-      setError('Sua identificação de cliente é necessária.');
+      setError("Sua identificação de cliente é necessária.");
       return;
     }
     if (!selectedDate || !selectedTime || selectedServiceIds.length === 0) {
-      setError('Por favor, preencha todos os campos do agendamento.');
+      setError("Por favor, preencha todos os campos do agendamento.");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const result = await api.createAppointment({
+      const result = await localStore.createAppointment({
         customerId: customer.id,
         customerName: customer.fullName,
         customerPhone: customer.phone,
@@ -167,7 +185,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       onAppointmentCreated(result);
       setStep(5); // Success step
     } catch (err: any) {
-      setError(err.message || 'Erro ao agendar horário. Tente novamente.');
+      setError(err.message || "Erro ao agendar horário. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -175,16 +193,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   // Format date display (e.g. "Terça-feira, 15 de Outubro de 2026")
   const formatDateDisplay = (dateStr: string) => {
-    if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!dateStr) return "";
+    const [y, m, d] = dateStr.split("-").map(Number);
     const dateObj = new Date(y, m - 1, d);
-    return dateObj.toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
+    return dateObj.toLocaleDateString("pt-BR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
+
+  const rawWa = config.whatsapp
+    ? config.whatsapp.replace(/\D/g, "")
+    : "5567993106619";
+  const waNum = rawWa.startsWith("55") ? rawWa : `55${rawWa}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-zinc-950/80 backdrop-blur-md animate-fadeIn overflow-y-auto">
@@ -193,7 +216,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         <div className="h-1 bg-gradient-to-r from-amber-500 via-amber-300 to-amber-600" />
 
         {/* Modal Header */}
-        <div className="p-4 sm:p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/50">
+        <div className="p-4 sm:p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
               <Scissors className="w-5 h-5 -rotate-45" />
@@ -210,7 +233,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-100 transition-colors"
+            className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>
@@ -219,16 +242,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         {/* Wizard Progress Bar */}
         {step < 5 && (
           <div className="grid grid-cols-4 bg-zinc-950 border-b border-zinc-800 text-[11px] text-center font-bold uppercase tracking-wider text-zinc-500">
-            <div className={`py-2.5 border-r border-zinc-800 transition-colors ${step >= 1 ? 'text-amber-400 bg-amber-500/5' : ''}`}>
+            <div
+              className={`py-2.5 border-r border-zinc-800 transition-colors ${step >= 1 ? "text-amber-400 bg-amber-500/5" : ""}`}
+            >
               1. Serviços
             </div>
-            <div className={`py-2.5 border-r border-zinc-800 transition-colors ${step >= 2 ? 'text-amber-400 bg-amber-500/5' : ''}`}>
+            <div
+              className={`py-2.5 border-r border-zinc-800 transition-colors ${step >= 2 ? "text-amber-400 bg-amber-500/5" : ""}`}
+            >
               2. Dia
             </div>
-            <div className={`py-2.5 border-r border-zinc-800 transition-colors ${step >= 3 ? 'text-amber-400 bg-amber-500/5' : ''}`}>
+            <div
+              className={`py-2.5 border-r border-zinc-800 transition-colors ${step >= 3 ? "text-amber-400 bg-amber-500/5" : ""}`}
+            >
               3. Horário
             </div>
-            <div className={`py-2.5 transition-colors ${step >= 4 ? 'text-amber-400 bg-amber-500/5' : ''}`}>
+            <div
+              className={`py-2.5 transition-colors ${step >= 4 ? "text-amber-400 bg-amber-500/5" : ""}`}
+            >
               4. Confirmar
             </div>
           </div>
@@ -256,59 +287,69 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {services.filter(s => s.active !== false).map((service) => {
-                  const isSelected = selectedServiceIds.includes(service.id);
-                  const isConsult = service.priceType === 'consult' || service.price === null;
+                {services
+                  .filter((s) => s.active !== false)
+                  .map((service) => {
+                    const isSelected = selectedServiceIds.includes(service.id);
+                    const isConsult =
+                      service.priceType === "consult" || service.price === null;
 
-                  return (
-                    <div
-                      key={service.id}
-                      onClick={() => toggleService(service.id)}
-                      className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                        isSelected
-                          ? 'bg-amber-500/10 border-amber-500 shadow-md'
-                          : 'bg-zinc-950 border-zinc-800 hover:border-amber-500/30'
-                      }`}
-                    >
-                      <div className="pr-2">
-                        <h4 className="text-sm font-bold text-zinc-100">
-                          {service.name}
-                        </h4>
-                        <span className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5">
-                          <Clock className="w-3 h-3 text-amber-500" />
-                          {service.durationMinutes} min
-                        </span>
-                      </div>
+                    return (
+                      <div
+                        key={service.id}
+                        onClick={() => toggleService(service.id)}
+                        className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                          isSelected
+                            ? "bg-amber-500/10 border-amber-500 shadow-md"
+                            : "bg-zinc-950 border-zinc-800 hover:border-amber-500/30"
+                        }`}
+                      >
+                        <div className="pr-2">
+                          <h4 className="text-sm font-bold text-zinc-100">
+                            {service.name}
+                          </h4>
+                          <span className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5">
+                            <Clock className="w-3 h-3 text-amber-500" />
+                            {service.durationMinutes} min
+                          </span>
+                        </div>
 
-                      <div className="text-right flex items-center gap-3">
-                        <span className="text-xs font-bold text-amber-400">
-                          {isConsult ? 'Consultar' : `R$ ${service.price?.toFixed(2).replace('.', ',')}`}
-                        </span>
-                        <div
-                          className={`w-5 h-5 rounded flex items-center justify-center text-xs ${
-                            isSelected ? 'bg-amber-500 text-zinc-950 font-bold' : 'bg-zinc-800 text-transparent'
-                          }`}
-                        >
-                          <Check className="w-3.5 h-3.5" />
+                        <div className="text-right flex items-center gap-3">
+                          <span className="text-xs font-bold text-amber-400">
+                            {isConsult
+                              ? "Consultar"
+                              : `R$ ${service.price?.toFixed(2).replace(".", ",")}`}
+                          </span>
+                          <div
+                            className={`w-5 h-5 rounded flex items-center justify-center text-xs ${
+                              isSelected
+                                ? "bg-amber-500 text-zinc-950 font-bold"
+                                : "bg-zinc-800 text-transparent"
+                            }`}
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
 
               {/* Step 1 Footer */}
               <div className="pt-4 border-t border-zinc-800 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-zinc-400">
-                    Duração Total: <strong className="text-zinc-200">{totalDurationMinutes} min</strong>
+                    Duração Total:{" "}
+                    <strong className="text-zinc-200">
+                      {totalDurationMinutes} min
+                    </strong>
                   </p>
                   <p className="text-sm font-bold text-amber-400">
                     {hasConsult
                       ? totalPriceFixed > 0
-                        ? `R$ ${totalPriceFixed.toFixed(2).replace('.', ',')} + Consultar`
-                        : 'Consultar valor'
-                      : `R$ ${totalPriceFixed.toFixed(2).replace('.', ',')}`}
+                        ? `R$ ${totalPriceFixed.toFixed(2).replace(".", ",")} + Consultar`
+                        : "Consultar valor"
+                      : `R$ ${totalPriceFixed.toFixed(2).replace(".", ",")}`}
                   </p>
                 </div>
 
@@ -332,7 +373,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     Selecione o Dia no Calendário
                   </h3>
                   <p className="text-xs text-zinc-400">
-                    Dias desabilitados correspondem ao período passado ou fechamento da barbearia.
+                    Dias desabilitados correspondem ao período passado ou
+                    fechamento da barbearia.
                   </p>
                 </div>
               </div>
@@ -346,7 +388,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <span className="text-sm font-bold uppercase text-amber-400 tracking-wider">
-                  {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                  {currentMonth.toLocaleDateString("pt-BR", {
+                    month: "long",
+                    year: "numeric",
+                  })}
                 </span>
                 <button
                   onClick={() => setCurrentMonth(new Date(year, month + 1, 1))}
@@ -379,7 +424,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   {/* Day buttons */}
                   {daysArray.map((dayNum) => {
                     const disabled = isDayDisabled(dayNum);
-                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
                     const isSelected = selectedDate === dateStr;
 
                     return (
@@ -389,10 +434,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         onClick={() => handleDateSelect(dayNum)}
                         className={`h-10 sm:h-12 rounded-xl text-xs sm:text-sm font-bold flex flex-col items-center justify-center transition-all ${
                           disabled
-                            ? 'opacity-25 bg-zinc-900 text-zinc-600 cursor-not-allowed line-through'
+                            ? "opacity-25 bg-zinc-900 text-zinc-600 cursor-not-allowed line-through"
                             : isSelected
-                            ? 'bg-amber-500 text-zinc-950 font-black shadow-lg shadow-amber-500/20 scale-105'
-                            : 'bg-zinc-900 text-zinc-200 hover:bg-amber-500/20 hover:text-amber-400 border border-zinc-800'
+                              ? "bg-amber-500 text-zinc-950 font-black shadow-lg shadow-amber-500/20 scale-105"
+                              : "bg-zinc-900 text-zinc-200 hover:bg-amber-500/20 hover:text-amber-400 border border-zinc-800"
                         }`}
                       >
                         <span>{dayNum}</span>
@@ -430,7 +475,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   Horários Disponíveis para {formatDateDisplay(selectedDate)}
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Tempo estimado de atendimento: <strong className="text-amber-400">{totalDurationMinutes} min</strong>
+                  Tempo estimado de atendimento:{" "}
+                  <strong className="text-amber-400">
+                    {totalDurationMinutes} min
+                  </strong>
                 </p>
               </div>
 
@@ -444,7 +492,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </div>
               ) : availableSlots.length === 0 ? (
                 <div className="py-8 text-center p-4 bg-zinc-950 rounded-xl border border-zinc-800 text-zinc-400 text-xs">
-                  Nenhum horário livre neste dia para a duração selecionada. Por favor, escolha outro dia.
+                  Nenhum horário livre neste dia para a duração selecionada. Por
+                  favor, escolha outro dia.
                 </div>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5 max-h-64 overflow-y-auto p-1">
@@ -456,8 +505,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         onClick={() => setSelectedTime(slot)}
                         className={`py-3 px-2 rounded-xl text-xs font-bold tracking-wide transition-all border flex items-center justify-center gap-1.5 ${
                           isSelected
-                            ? 'bg-amber-500 text-zinc-950 border-amber-400 font-black shadow-lg scale-105'
-                            : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-amber-500/40 hover:text-amber-400'
+                            ? "bg-amber-500 text-zinc-950 border-amber-400 font-black shadow-lg scale-105"
+                            : "bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-amber-500/40 hover:text-amber-400"
                         }`}
                       >
                         <Clock className="w-3.5 h-3.5" />
@@ -518,12 +567,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 {/* Customer Info */}
                 <div className="flex items-center justify-between pb-3 border-b border-zinc-800 text-xs">
                   <span className="text-zinc-400 font-medium">Cliente:</span>
-                  <span className="text-zinc-100 font-bold">{customer?.fullName} ({customer?.phone})</span>
+                  <span className="text-zinc-100 font-bold">
+                    {customer?.fullName} ({customer?.phone})
+                  </span>
                 </div>
 
                 {/* Date & Time */}
                 <div className="flex items-center justify-between pb-3 border-b border-zinc-800 text-xs">
-                  <span className="text-zinc-400 font-medium">Data & Horário:</span>
+                  <span className="text-zinc-400 font-medium">
+                    Data & Horário:
+                  </span>
                   <span className="text-amber-400 font-bold">
                     {formatDateDisplay(selectedDate)} às {selectedTime}
                   </span>
@@ -531,15 +584,22 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
                 {/* Services Chosen */}
                 <div className="pb-3 border-b border-zinc-800 text-xs">
-                  <span className="text-zinc-400 font-medium block mb-1">Serviço(s) Selecionado(s):</span>
+                  <span className="text-zinc-400 font-medium block mb-1">
+                    Serviço(s) Selecionado(s):
+                  </span>
                   <div className="space-y-1">
                     {selectedServicesList.map((srv) => (
-                      <div key={srv.id} className="flex justify-between text-zinc-200">
-                        <span>• {srv.name} ({srv.durationMinutes} min)</span>
+                      <div
+                        key={srv.id}
+                        className="flex justify-between text-zinc-200"
+                      >
+                        <span>
+                          • {srv.name} ({srv.durationMinutes} min)
+                        </span>
                         <span className="font-semibold text-amber-400">
-                          {srv.priceType === 'consult' || srv.price === null
-                            ? 'Consultar'
-                            : `R$ ${srv.price.toFixed(2).replace('.', ',')}`}
+                          {srv.priceType === "consult" || srv.price === null
+                            ? "Consultar"
+                            : `R$ ${srv.price.toFixed(2).replace(".", ",")}`}
                         </span>
                       </div>
                     ))}
@@ -549,17 +609,23 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 {/* Total & Duration */}
                 <div className="flex items-center justify-between pt-1">
                   <div>
-                    <span className="text-xs text-zinc-400 block">Duração Total Estimada</span>
-                    <span className="text-sm font-bold text-zinc-200">{totalDurationMinutes} minutos</span>
+                    <span className="text-xs text-zinc-400 block">
+                      Duração Total Estimada
+                    </span>
+                    <span className="text-sm font-bold text-zinc-200">
+                      {totalDurationMinutes} minutos
+                    </span>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs text-zinc-400 block">Valor Final</span>
+                    <span className="text-xs text-zinc-400 block">
+                      Valor Final
+                    </span>
                     <span className="text-lg font-black text-amber-400">
                       {hasConsult
                         ? totalPriceFixed > 0
-                          ? `R$ ${totalPriceFixed.toFixed(2).replace('.', ',')} + Consultar`
-                          : 'Consultar valor'
-                        : `R$ ${totalPriceFixed.toFixed(2).replace('.', ',')}`}
+                          ? `R$ ${totalPriceFixed.toFixed(2).replace(".", ",")} + Consultar`
+                          : "Consultar valor"
+                        : `R$ ${totalPriceFixed.toFixed(2).replace(".", ",")}`}
                     </span>
                   </div>
                 </div>
@@ -567,7 +633,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
               <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 text-xs flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 shrink-0 text-amber-400" />
-                <span>O pagamento é efetuado diretamente na barbearia após a realização dos serviços.</span>
+                <span>
+                  O pagamento é efetuado diretamente na barbearia após a
+                  realização dos serviços.
+                </span>
               </div>
 
               {/* Step 4 Footer */}
@@ -584,7 +653,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   onClick={handleConfirmAppointment}
                   className="px-8 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50"
                 >
-                  {loading ? 'Confirmando...' : 'Confirmar Agendamento ✓'}
+                  {loading ? "Confirmando..." : "Confirmar Agendamento ✓"}
                 </button>
               </div>
             </div>
@@ -602,8 +671,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   Agendamento Confirmado!
                 </h3>
                 <p className="text-xs text-zinc-300 mt-1 max-w-md mx-auto">
-                  Seu horário está garantido para{' '}
-                  <strong className="text-amber-300">{formatDateDisplay(createdAppointment.date)} às {createdAppointment.time}</strong>.
+                  Seu horário está garantido para{" "}
+                  <strong className="text-amber-300">
+                    {formatDateDisplay(createdAppointment.date)} às{" "}
+                    {createdAppointment.time}
+                  </strong>
+                  .
                 </p>
               </div>
 
@@ -623,16 +696,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 )}
 
                 <a
-                  href={`https://wa.me/${config.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(
+                  href={`https://wa.me/${waNum}?text=${encodeURIComponent(
                     `Olá! Fiz um agendamento para ${createdAppointment.customerName} no dia ${
-                      createdAppointment.date.includes('-')
-                        ? createdAppointment.date.split('-').reverse().join('/')
+                      createdAppointment.date.includes("-")
+                        ? createdAppointment.date.split("-").reverse().join("/")
                         : createdAppointment.date
-                    } às ${createdAppointment.time}.`
+                    } às ${createdAppointment.time}.`,
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/20"
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center justify-center gap-2 transition-all min-h-[44px]"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>Enviar no WhatsApp</span>

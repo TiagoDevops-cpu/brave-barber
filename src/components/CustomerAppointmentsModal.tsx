@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
 import {
-  X,
-  Calendar,
-  Clock,
-  CalendarPlus,
-  ExternalLink,
-  Trash2,
-  Edit3,
-  CheckCircle2,
   AlertCircle,
-  Scissors,
+  Calendar,
+  CalendarPlus,
+  CheckCircle2,
   ChevronLeft,
+  Clock,
+  Edit3,
+  ExternalLink,
   RefreshCw,
-} from 'lucide-react';
-import { Appointment, Customer, ShopConfig, ServiceItem } from '../types';
-import { api } from '../lib/api';
+  Scissors,
+  Trash2,
+  X,
+} from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { localStore } from "../lib/storage";
+import type { Appointment, Customer, ServiceItem, ShopConfig } from "../types";
 
 interface CustomerAppointmentsModalProps {
   config: ShopConfig;
@@ -24,13 +25,9 @@ interface CustomerAppointmentsModalProps {
   onAppointmentUpdated?: () => void;
 }
 
-export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps> = ({
-  config,
-  customer,
-  isOpen,
-  onClose,
-  onAppointmentUpdated,
-}) => {
+export const CustomerAppointmentsModal: React.FC<
+  CustomerAppointmentsModalProps
+> = ({ config, customer, isOpen, onClose, onAppointmentUpdated }) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,23 +37,29 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
   const [cancelLoading, setCancelLoading] = useState(false);
 
   // Reschedule / Edit State
-  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
-  const [editDate, setEditDate] = useState<string>('');
-  const [editTime, setEditTime] = useState<string>('');
+  const [editingAppointment, setEditingAppointment] =
+    useState<Appointment | null>(null);
+  const [editDate, setEditDate] = useState<string>("");
+  const [editTime, setEditTime] = useState<string>("");
   const [editServiceIds, setEditServiceIds] = useState<string[]>([]);
-  const [editNotes, setEditNotes] = useState<string>('');
+  const [editNotes, setEditNotes] = useState<string>("");
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [rescheduleLoading, setRescheduleLoading] = useState(false);
 
   // Feedback Messages
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [statusMessage, setStatusMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   const fetchAppointments = async () => {
     if (!customer?.phone) return;
     setLoading(true);
     try {
-      const data = await api.getAppointments({ customerPhone: customer.phone });
+      const data = await localStore.getAppointments({
+        customerPhone: customer.phone,
+      });
       setAppointments(data);
     } catch (err: any) {
       console.error(err);
@@ -67,8 +70,25 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
 
   useEffect(() => {
     if (isOpen && customer?.phone) {
-      fetchAppointments();
-      api.getServices().then(setServices).catch(console.error);
+      setLoading(true);
+      const unsubscribe = localStore.subscribeAppointments(
+        { customerPhone: customer.phone },
+        (data) => {
+          setAppointments(data);
+          setLoading(false);
+        },
+        (error) => {
+          console.error(error);
+          setLoading(false);
+        },
+      );
+      try {
+        const srvs = localStore.getServices();
+        setServices(srvs);
+      } catch (e) {
+        console.error(e);
+      }
+      return unsubscribe;
     } else {
       setEditingAppointment(null);
       setCancelingId(null);
@@ -79,20 +99,31 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
   // Load available slots when date or selected services change during edit
   useEffect(() => {
     if (editingAppointment && editDate) {
-      const chosenServices = services.filter((s) => editServiceIds.includes(s.id));
-      const duration = chosenServices.reduce((acc, s) => acc + (s.durationMinutes || 20), 0) || 20;
+      const chosenServices = services.filter((s) =>
+        editServiceIds.includes(s.id),
+      );
+      const duration =
+        chosenServices.reduce((acc, s) => acc + (s.durationMinutes || 20), 0) ||
+        20;
 
-      setLoadingSlots(true);
-      api.getAvailableSlots(editDate, duration)
-        .then((res) => {
+      const loadSlots = async () => {
+        setLoadingSlots(true);
+        try {
+          const res = await localStore.getAvailableSlots(editDate, duration);
           setAvailableSlots(res.availableSlots || []);
-          // If previous selected time is not in new slots and date changed, clear slot choice unless it matches
-          if (!res.availableSlots.includes(editTime) && editDate !== editingAppointment.date) {
-            setEditTime('');
+          if (
+            !res.availableSlots.includes(editTime) &&
+            editDate !== editingAppointment.date
+          ) {
+            setEditTime("");
           }
-        })
-        .catch(console.error)
-        .finally(() => setLoadingSlots(false));
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setLoadingSlots(false);
+        }
+      };
+      void loadSlots();
     }
   }, [editDate, editServiceIds, editingAppointment, services]);
 
@@ -104,13 +135,19 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
     setCancelLoading(true);
     setStatusMessage(null);
     try {
-      await api.cancelAppointmentByCustomer(id, customer.phone);
-      setStatusMessage({ type: 'success', text: 'Agendamento cancelado com sucesso!' });
+      await localStore.cancelAppointmentByCustomer(id, customer.phone);
+      setStatusMessage({
+        type: "success",
+        text: "Agendamento cancelado com sucesso!",
+      });
       setCancelingId(null);
-      await fetchAppointments();
+      void fetchAppointments();
       if (onAppointmentUpdated) onAppointmentUpdated();
     } catch (err: any) {
-      setStatusMessage({ type: 'error', text: err.message || 'Erro ao cancelar o agendamento.' });
+      setStatusMessage({
+        type: "error",
+        text: err.message || "Erro ao cancelar o agendamento.",
+      });
     } finally {
       setCancelLoading(false);
     }
@@ -122,7 +159,7 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
     setEditDate(app.date);
     setEditTime(app.time);
     setEditServiceIds(app.serviceIds || []);
-    setEditNotes(app.notes || '');
+    setEditNotes(app.notes || "");
     setStatusMessage(null);
   };
 
@@ -130,11 +167,17 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
   const handleSaveReschedule = async () => {
     if (!editingAppointment || !customer) return;
     if (!editDate || !editTime) {
-      setStatusMessage({ type: 'error', text: 'Por favor, selecione uma data e um horário disponível.' });
+      setStatusMessage({
+        type: "error",
+        text: "Por favor, selecione uma data e um horário disponível.",
+      });
       return;
     }
     if (editServiceIds.length === 0) {
-      setStatusMessage({ type: 'error', text: 'Selecione ao menos um serviço.' });
+      setStatusMessage({
+        type: "error",
+        text: "Selecione ao menos um serviço.",
+      });
       return;
     }
 
@@ -142,7 +185,7 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
     setStatusMessage(null);
 
     try {
-      await api.rescheduleAppointmentByCustomer(editingAppointment.id, {
+      await localStore.rescheduleAppointmentByCustomer(editingAppointment.id, {
         date: editDate,
         time: editTime,
         serviceIds: editServiceIds,
@@ -150,12 +193,18 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
         customerPhone: customer.phone,
       });
 
-      setStatusMessage({ type: 'success', text: 'Agendamento alterado com sucesso!' });
+      setStatusMessage({
+        type: "success",
+        text: "Agendamento alterado com sucesso!",
+      });
       setEditingAppointment(null);
-      await fetchAppointments();
+      void fetchAppointments();
       if (onAppointmentUpdated) onAppointmentUpdated();
     } catch (err: any) {
-      setStatusMessage({ type: 'error', text: err.message || 'Erro ao reagendar o horário.' });
+      setStatusMessage({
+        type: "error",
+        text: err.message || "Erro ao reagendar o horário.",
+      });
     } finally {
       setRescheduleLoading(false);
     }
@@ -171,7 +220,7 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
     }
   };
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toISOString().split("T")[0];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-md animate-fadeIn">
@@ -198,10 +247,14 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
 
             <div>
               <h2 className="text-lg font-bold font-serif uppercase tracking-wide text-amber-400">
-                {editingAppointment ? 'Alterar Agendamento' : 'Meus Agendamentos'}
+                {editingAppointment
+                  ? "Alterar Agendamento"
+                  : "Meus Agendamentos"}
               </h2>
               <p className="text-xs text-zinc-400">
-                Cliente: <strong className="text-zinc-200">{customer?.fullName}</strong> ({customer?.phone})
+                Cliente:{" "}
+                <strong className="text-zinc-200">{customer?.fullName}</strong>{" "}
+                ({customer?.phone})
               </p>
             </div>
           </div>
@@ -218,13 +271,13 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
         {statusMessage && (
           <div
             className={`px-5 py-3 text-xs font-bold flex items-center justify-between gap-2 border-b ${
-              statusMessage.type === 'success'
-                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/30'
-                : 'bg-red-950/80 text-red-300 border-red-500/30'
+              statusMessage.type === "success"
+                ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/30"
+                : "bg-red-950/80 text-red-300 border-red-500/30"
             }`}
           >
             <div className="flex items-center gap-2">
-              {statusMessage.type === 'success' ? (
+              {statusMessage.type === "success" ? (
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               ) : (
                 <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
@@ -252,7 +305,9 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
                 <p className="text-zinc-200 font-bold">
                   {editingAppointment.date} às {editingAppointment.time}
                 </p>
-                <p className="text-zinc-400">{editingAppointment.serviceNames.join(', ')}</p>
+                <p className="text-zinc-400">
+                  {editingAppointment.serviceNames.join(", ")}
+                </p>
               </div>
 
               {/* 1. Services Selection */}
@@ -271,13 +326,13 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
                         onClick={() => toggleEditService(s.id)}
                         className={`p-2.5 rounded-xl text-left border text-xs transition-all flex items-center justify-between ${
                           isSelected
-                            ? 'bg-amber-500/10 border-amber-500 text-amber-300 font-bold'
-                            : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                            ? "bg-amber-500/10 border-amber-500 text-amber-300 font-bold"
+                            : "bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700"
                         }`}
                       >
                         <span className="truncate pr-2">{s.name}</span>
                         <span className="text-[11px] text-amber-400 font-bold shrink-0">
-                          {s.price !== null ? `R$ ${s.price}` : 'Sob Consulta'}
+                          {s.price !== null ? `R$ ${s.price}` : "Sob Consulta"}
                         </span>
                       </button>
                     );
@@ -327,8 +382,8 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
                           onClick={() => setEditTime(slot)}
                           className={`py-2 px-1 rounded-lg text-xs font-bold border text-center transition-all ${
                             isSelected
-                              ? 'bg-amber-500 text-zinc-950 border-amber-400 shadow-md scale-105'
-                              : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-amber-500/50'
+                              ? "bg-amber-500 text-zinc-950 border-amber-400 shadow-md scale-105"
+                              : "bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-amber-500/50"
                           }`}
                         >
                           {slot}
@@ -341,7 +396,9 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
 
               {/* 4. Notes */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-400">Observações (opcional):</label>
+                <label className="text-xs font-bold text-zinc-400">
+                  Observações (opcional):
+                </label>
                 <input
                   type="text"
                   placeholder="Ex: Prefiro tesoura no topo"
@@ -381,139 +438,144 @@ export const CustomerAppointmentsModal: React.FC<CustomerAppointmentsModalProps>
                 </button>
               </div>
             </div>
+          ) : /* APPOINTMENTS LIST VIEW */
+          loading ? (
+            <div className="py-12 text-center text-zinc-400 text-xs flex items-center justify-center gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin text-amber-500" />
+              <span>Buscando seus horários...</span>
+            </div>
+          ) : appointments.length === 0 ? (
+            <div className="py-12 text-center text-zinc-400 text-xs bg-zinc-950 rounded-xl border border-zinc-800">
+              Você ainda não possui nenhum agendamento cadastrado com este
+              telefone.
+            </div>
           ) : (
-            /* APPOINTMENTS LIST VIEW */
-            loading ? (
-              <div className="py-12 text-center text-zinc-400 text-xs flex items-center justify-center gap-2">
-                <RefreshCw className="w-4 h-4 animate-spin text-amber-500" />
-                <span>Buscando seus horários...</span>
-              </div>
-            ) : appointments.length === 0 ? (
-              <div className="py-12 text-center text-zinc-400 text-xs bg-zinc-950 rounded-xl border border-zinc-800">
-                Você ainda não possui nenhum agendamento cadastrado com este telefone.
-              </div>
-            ) : (
-              appointments.map((app) => {
-                const isPending = app.status === 'pending';
-                const isCanceling = cancelingId === app.id;
+            appointments.map((app) => {
+              const isPending = app.status === "pending";
+              const isCanceling = cancelingId === app.id;
 
-                return (
-                  <div
-                    key={app.id}
-                    className={`bg-zinc-950 p-4 rounded-xl border transition-all flex flex-col gap-3 ${
-                      isPending ? 'border-amber-500/30 shadow-lg' : 'border-zinc-800 opacity-80'
-                    }`}
-                  >
-                    {/* Date, Time & Status Badge */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-amber-500" />
-                        <span className="text-sm font-bold text-amber-400">
-                          {app.date} às {app.time}
-                        </span>
-                      </div>
-
-                      <span
-                        className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${
-                          app.status === 'completed'
-                            ? 'bg-green-500/10 text-green-400 border border-green-500/30'
-                            : app.status === 'cancelled'
-                            ? 'bg-red-500/10 text-red-400 border border-red-500/30'
-                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/30 animate-pulse'
-                        }`}
-                      >
-                        {app.status === 'completed'
-                          ? 'Concluído'
-                          : app.status === 'cancelled'
-                          ? 'Cancelado'
-                          : 'Aberto / Confirmado'}
+              return (
+                <div
+                  key={app.id}
+                  className={`bg-zinc-950 p-4 rounded-xl border transition-all flex flex-col gap-3 ${
+                    isPending
+                      ? "border-amber-500/30 shadow-lg"
+                      : "border-zinc-800 opacity-80"
+                  }`}
+                >
+                  {/* Date, Time & Status Badge */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-amber-500" />
+                      <span className="text-sm font-bold text-amber-400">
+                        {app.date} às {app.time}
                       </span>
                     </div>
 
-                    {/* Details */}
-                    <div className="text-xs text-zinc-300 space-y-1">
-                      <p>
-                        <strong className="text-zinc-400">Serviços:</strong>{' '}
-                        {app.serviceNames.join(', ')}
-                      </p>
-                      <p>
-                        <strong className="text-zinc-400">Valor Estimado:</strong>{' '}
-                        <span className="text-amber-400 font-bold">{app.priceDisplay}</span>
-                      </p>
-                      {app.notes && (
-                        <p className="text-zinc-400 italic">"{app.notes}"</p>
-                      )}
-                    </div>
+                    <span
+                      className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                        app.status === "completed"
+                          ? "bg-green-500/10 text-green-400 border border-green-500/30"
+                          : app.status === "cancelled"
+                            ? "bg-red-500/10 text-red-400 border border-red-500/30"
+                            : "bg-amber-500/10 text-amber-400 border border-amber-500/30 animate-pulse"
+                      }`}
+                    >
+                      {app.status === "completed"
+                        ? "Concluído"
+                        : app.status === "cancelled"
+                          ? "Cancelado"
+                          : "Aberto / Confirmado"}
+                    </span>
+                  </div>
 
-                    {/* Cancellation Confirmation Bar */}
-                    {isCanceling && (
-                      <div className="p-3 bg-red-950/40 border border-red-500/30 rounded-lg text-xs space-y-2 animate-fadeIn">
-                        <p className="text-red-300 font-bold flex items-center gap-1.5">
-                          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                          <span>Tem certeza que deseja cancelar este agendamento?</span>
-                        </p>
-                        <div className="flex items-center justify-end gap-2 pt-1">
-                          <button
-                            onClick={() => setCancelingId(null)}
-                            disabled={cancelLoading}
-                            className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold"
-                          >
-                            Voltar
-                          </button>
-                          <button
-                            onClick={() => handleConfirmCancel(app.id)}
-                            disabled={cancelLoading}
-                            className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1"
-                          >
-                            {cancelLoading ? 'Cancelando...' : 'Sim, Cancelar'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Action Bar for Pending Appointments */}
-                    {isPending && !isCanceling && (
-                      <div className="pt-2 border-t border-zinc-900 flex flex-wrap items-center justify-between gap-2">
-                        {app.googleCalendarLink && (
-                          <a
-                            href={app.googleCalendarLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-amber-400 text-[11px] font-bold border border-zinc-800 transition-all"
-                          >
-                            <CalendarPlus className="w-3.5 h-3.5" />
-                            <span>Google Agenda</span>
-                            <ExternalLink className="w-3 h-3 text-zinc-500" />
-                          </a>
-                        )}
-
-                        <div className="flex items-center gap-2 ml-auto">
-                          {/* Cancel Option */}
-                          <button
-                            onClick={() => setCancelingId(app.id)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/20 transition-all"
-                            title="Cancelar este agendamento"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Cancelar</span>
-                          </button>
-
-                          {/* Edit / Reschedule Option */}
-                          <button
-                            onClick={() => handleStartEdit(app)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-bold border border-amber-500/30 transition-all shadow-sm"
-                            title="Mudar data, horário ou serviços"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                            <span>Mudar / Reagendar</span>
-                          </button>
-                        </div>
-                      </div>
+                  {/* Details */}
+                  <div className="text-xs text-zinc-300 space-y-1">
+                    <p>
+                      <strong className="text-zinc-400">Serviços:</strong>{" "}
+                      {app.serviceNames.join(", ")}
+                    </p>
+                    <p>
+                      <strong className="text-zinc-400">Valor Estimado:</strong>{" "}
+                      <span className="text-amber-400 font-bold">
+                        {app.priceDisplay}
+                      </span>
+                    </p>
+                    {app.notes && (
+                      <p className="text-zinc-400 italic">"{app.notes}"</p>
                     )}
                   </div>
-                );
-              })
-            )
+
+                  {/* Cancellation Confirmation Bar */}
+                  {isCanceling && (
+                    <div className="p-3 bg-red-950/40 border border-red-500/30 rounded-lg text-xs space-y-2 animate-fadeIn">
+                      <p className="text-red-300 font-bold flex items-center gap-1.5">
+                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                        <span>
+                          Tem certeza que deseja cancelar este agendamento?
+                        </span>
+                      </p>
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                          onClick={() => setCancelingId(null)}
+                          disabled={cancelLoading}
+                          className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold"
+                        >
+                          Voltar
+                        </button>
+                        <button
+                          onClick={() => handleConfirmCancel(app.id)}
+                          disabled={cancelLoading}
+                          className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1"
+                        >
+                          {cancelLoading ? "Cancelando..." : "Sim, Cancelar"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Bar for Pending Appointments */}
+                  {isPending && !isCanceling && (
+                    <div className="pt-2 border-t border-zinc-900 flex flex-wrap items-center justify-between gap-2">
+                      {app.googleCalendarLink && (
+                        <a
+                          href={app.googleCalendarLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-amber-400 text-[11px] font-bold border border-zinc-800 transition-all"
+                        >
+                          <CalendarPlus className="w-3.5 h-3.5" />
+                          <span>Google Agenda</span>
+                          <ExternalLink className="w-3 h-3 text-zinc-500" />
+                        </a>
+                      )}
+
+                      <div className="flex items-center gap-2 ml-auto">
+                        {/* Cancel Option */}
+                        <button
+                          onClick={() => setCancelingId(app.id)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/20 transition-all"
+                          title="Cancelar este agendamento"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Cancelar</span>
+                        </button>
+
+                        {/* Edit / Reschedule Option */}
+                        <button
+                          onClick={() => handleStartEdit(app)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-bold border border-amber-500/30 transition-all shadow-sm"
+                          title="Mudar data, horário ou serviços"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Mudar / Reagendar</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>

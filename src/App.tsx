@@ -1,24 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { Header } from './components/Header';
-import { RoleSelector } from './components/RoleSelector';
-import { CustomerIdentifyModal } from './components/CustomerIdentifyModal';
-import { HeroVideo } from './components/HeroVideo';
-import { ServicesSection } from './components/ServicesSection';
-import { ProductsSection } from './components/ProductsSection';
-import { GallerySection } from './components/GallerySection';
-import { BookingModal } from './components/BookingModal';
-import { CustomerAppointmentsModal } from './components/CustomerAppointmentsModal';
-import { BarberAuthModal } from './components/BarberAuthModal';
-import { BarberDashboard } from './components/BarberDashboard';
-import { Footer } from './components/Footer';
-
-import { ShopConfig, ServiceItem, GalleryItem, Customer, AuthResponse } from './types';
-import { api } from './lib/api';
-import { initialShopConfig, initialServices, initialGallery } from './data/initialData';
+import React, { useEffect, useState } from "react";
+import { BarberAuthModal } from "./components/BarberAuthModal";
+import { BarberDashboard } from "./components/BarberDashboard";
+import { BookingModal } from "./components/BookingModal";
+import { CustomerAppointmentsModal } from "./components/CustomerAppointmentsModal";
+import { CustomerIdentifyModal } from "./components/CustomerIdentifyModal";
+import { Footer } from "./components/Footer";
+import { GallerySection } from "./components/GallerySection";
+import { Header } from "./components/Header";
+import { HeroVideo } from "./components/HeroVideo";
+import { ProductsSection } from "./components/ProductsSection";
+import { RoleSelector } from "./components/RoleSelector";
+import { ServicesSection } from "./components/ServicesSection";
+import {
+  initialGallery,
+  initialServices,
+  initialShopConfig,
+} from "./data/initialData";
+import { localStore } from "./lib/storage";
+import type {
+  AuthResponse,
+  Customer,
+  GalleryItem,
+  ServiceItem,
+  ShopConfig,
+} from "./types";
 
 export default function App() {
   // Role State: 'role-selector' | 'client' | 'barber'
-  const [activeRole, setActiveRole] = useState<'role-selector' | 'client' | 'barber'>('role-selector');
+  const [activeRole, setActiveRole] = useState<
+    "role-selector" | "client" | "barber"
+  >("role-selector");
 
   // Config & Data State
   const [shopConfig, setShopConfig] = useState<ShopConfig>(initialShopConfig);
@@ -30,19 +41,22 @@ export default function App() {
   const [isIdentifyModalOpen, setIsIdentifyModalOpen] = useState(false);
 
   // Barber State
-  const [barberToken, setBarberToken] = useState<string | null>(localStorage.getItem('barber_token'));
+  const [barberToken, setBarberToken] = useState<string | null>(
+    localStorage.getItem("barber_token"),
+  );
   const [barberUser, setBarberUser] = useState<any>(null);
   const [isBarberAuthOpen, setIsBarberAuthOpen] = useState(false);
 
   // Booking Modal State
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
-  const [isCustomerAppointmentsOpen, setIsCustomerAppointmentsOpen] = useState(false);
+  const [isCustomerAppointmentsOpen, setIsCustomerAppointmentsOpen] =
+    useState(false);
 
   // Initial Fetch Data
   useEffect(() => {
     // Check saved customer data
-    const savedCustomer = localStorage.getItem('barber_customer_data');
+    const savedCustomer = localStorage.getItem("barber_customer_data");
     if (savedCustomer) {
       try {
         setCustomer(JSON.parse(savedCustomer));
@@ -58,41 +72,40 @@ export default function App() {
   // Verify Barber Token if exists
   useEffect(() => {
     if (barberToken) {
-      api.getMe(barberToken)
-        .then((res) => setBarberUser(res.user))
-        .catch(() => {
-          setBarberToken(null);
-          localStorage.removeItem('barber_token');
-        });
+      try {
+        const res = localStore.getMe();
+        setBarberUser(res.user);
+      } catch {
+        setBarberToken(null);
+        localStorage.removeItem("barber_token");
+      }
     }
   }, [barberToken]);
 
-  const loadAllData = async () => {
+  const loadAllData = () => {
     try {
-      const [cfg, srvs, gal] = await Promise.all([
-        api.getShopConfig().catch(() => initialShopConfig),
-        api.getServices().catch(() => initialServices),
-        api.getGallery().catch(() => initialGallery),
-      ]);
+      const cfg = localStore.getShopConfig();
+      const srvs = localStore.getServices();
+      const gal = localStore.getGallery();
       setShopConfig(cfg);
       setServices(srvs);
       setGallery(gal);
     } catch (e) {
-      console.error('Error loading initial local data', e);
+      console.error("Error loading initial local data", e);
     }
   };
 
   // Role Selection Logic
-  const handleSelectRole = (role: 'client' | 'barber') => {
-    if (role === 'client') {
-      setActiveRole('client');
+  const handleSelectRole = (role: "client" | "barber") => {
+    if (role === "client") {
+      setActiveRole("client");
       // If customer not identified yet, open identification modal
-      const saved = localStorage.getItem('barber_customer_data');
+      const saved = localStorage.getItem("barber_customer_data");
       if (!saved) {
         setIsIdentifyModalOpen(true);
       }
     } else {
-      setActiveRole('barber');
+      setActiveRole("barber");
       if (!barberToken) {
         setIsBarberAuthOpen(true);
       }
@@ -102,7 +115,9 @@ export default function App() {
   // Service toggle selection
   const handleToggleService = (serviceId: string) => {
     if (selectedServiceIds.includes(serviceId)) {
-      setSelectedServiceIds(selectedServiceIds.filter((id) => id !== serviceId));
+      setSelectedServiceIds(
+        selectedServiceIds.filter((id) => id !== serviceId),
+      );
     } else {
       setSelectedServiceIds([...selectedServiceIds, serviceId]);
     }
@@ -125,41 +140,42 @@ export default function App() {
   const handleBarberAuthSuccess = (authData: AuthResponse) => {
     setBarberToken(authData.token);
     setBarberUser(authData.user);
-    localStorage.setItem('barber_token', authData.token);
+    localStorage.setItem("barber_token", authData.token);
     setIsBarberAuthOpen(false);
-    setActiveRole('barber');
+    setActiveRole("barber");
   };
 
   // Barber Logout
   const handleBarberLogout = () => {
     setBarberToken(null);
     setBarberUser(null);
-    localStorage.removeItem('barber_token');
-    setActiveRole('role-selector');
+    localStorage.removeItem("barber_token");
+    setActiveRole("role-selector");
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-amber-500 selection:text-zinc-950">
-      
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-amber-500 selection:text-zinc-950 w-full max-w-full overflow-x-hidden">
       {/* 1. ROLE SELECTOR (Página de Entrada) */}
-      {activeRole === 'role-selector' && (
+      {activeRole === "role-selector" && (
         <RoleSelector config={shopConfig} onSelectRole={handleSelectRole} />
       )}
 
       {/* 2. CLIENT INTERFACE */}
-      {activeRole === 'client' && (
-        <div className="flex flex-col min-h-screen">
+      {activeRole === "client" && (
+        <div className="flex flex-col min-h-screen w-full max-w-full overflow-x-hidden">
           <Header
             config={shopConfig}
             customer={customer}
             barberToken={barberToken}
             onOpenBooking={handleOpenBooking}
-            onOpenCustomerAppointments={() => setIsCustomerAppointmentsOpen(true)}
+            onOpenCustomerAppointments={() =>
+              setIsCustomerAppointmentsOpen(true)
+            }
             onOpenGallery={() => {
-              const el = document.getElementById('galeria');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
+              const el = document.getElementById("galeria");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
             }}
-            onSwitchRole={() => setActiveRole('role-selector')}
+            onSwitchRole={() => setActiveRole("role-selector")}
             onLogoutBarber={handleBarberLogout}
             activeRole="client"
           />
@@ -187,13 +203,13 @@ export default function App() {
           <Footer
             config={shopConfig}
             onOpenBooking={handleOpenBooking}
-            onSwitchRole={() => setActiveRole('role-selector')}
+            onSwitchRole={() => setActiveRole("role-selector")}
           />
         </div>
       )}
 
       {/* 3. BARBER DASHBOARD */}
-      {activeRole === 'barber' && barberToken && barberUser && (
+      {activeRole === "barber" && barberToken && barberUser && (
         <div className="flex flex-col min-h-screen">
           <Header
             config={shopConfig}
@@ -202,7 +218,7 @@ export default function App() {
             onOpenBooking={handleOpenBooking}
             onOpenCustomerAppointments={() => {}}
             onOpenGallery={() => {}}
-            onSwitchRole={() => setActiveRole('role-selector')}
+            onSwitchRole={() => setActiveRole("role-selector")}
             onLogoutBarber={handleBarberLogout}
             activeRole="barber"
           />
@@ -259,7 +275,7 @@ export default function App() {
         isOpen={isBarberAuthOpen}
         onClose={() => {
           setIsBarberAuthOpen(false);
-          if (!barberToken) setActiveRole('role-selector');
+          if (!barberToken) setActiveRole("role-selector");
         }}
         onSuccess={handleBarberAuthSuccess}
       />

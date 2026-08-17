@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Temporary rules needed by the current app, which still has a local-only
+    // barber login. Replace these with Firebase Authentication rules before
+    // publishing the site publicly.
+    match /appointments/{appointmentId} {
+      allow read, write: if true;
+    }
+
+    // A document represents one reserved date/time and is used to avoid two
+    // devices booking the same slot simultaneously.
+    match /appointmentSlots/{slotId} {
+      allow read, write: if true;
+    }
+  }
+}

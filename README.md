@@ -55,24 +55,40 @@ A aplicação web da **Brave Barbearia** oferece uma experiência moderna, intui
 
 1. **Instalar dependências**:
    ```bash
-   npm install
+   corepack enable
+   pnpm install --frozen-lockfile
    ```
 
 2. **Iniciar ambiente de desenvolvimento**:
    ```bash
-   npm run dev
+   pnpm dev
    ```
    Acesse no navegador: `http://localhost:3000`
 
 3. **Gerar build de produção**:
    ```bash
-   npm run build
+   pnpm build
    ```
 
 4. **Iniciar em produção**:
    ```bash
-   npm start
+   pnpm start
    ```
+
+---
+
+## Qualidade antes da `main`
+
+Todo pull request para `main` executa a esteira em [`.github/workflows/quality.yml`](.github/workflows/quality.yml): lint/formatação (Biome), checagem de tipos, testes unitários e cobertura (Vitest), contratos de arquitetura, Knip, auditoria de dependências, build com orçamento de performance e teste end-to-end (Playwright).
+
+Para executar localmente:
+
+```bash
+pnpm quality
+pnpm test:e2e
+```
+
+Configure os checks do workflow como obrigatórios na proteção da branch `main`. Os requisitos manuais de segurança, privacidade e jurídico estão em [`docs/RELEASE_GATES.md`](docs/RELEASE_GATES.md).
 
 ---
 

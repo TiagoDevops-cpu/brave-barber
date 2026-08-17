@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Play, Sparkles, Image as ImageIcon, X, Scissors } from 'lucide-react';
-import { GalleryItem } from '../types';
+import { Image as ImageIcon, Play, Scissors, Sparkles, X } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import type { GalleryItem } from "../types";
 
 interface GallerySectionProps {
   gallery: GalleryItem[];
@@ -12,7 +13,6 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallery }) => {
   return (
     <section id="galeria" className="py-16 bg-zinc-950 text-zinc-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold uppercase tracking-wider mb-3">
@@ -23,7 +23,8 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallery }) => {
             Galeria da Barbearia
           </h2>
           <p className="text-sm text-zinc-400 mt-2 font-light">
-            Confira a qualidade dos nossos cortes, barbas e transformações realizadas no dia a dia.
+            Confira a qualidade dos nossos cortes, barbas e transformações
+            realizadas no dia a dia.
           </p>
         </div>
 
@@ -31,11 +32,16 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallery }) => {
         {gallery.length === 0 ? (
           <div className="text-center py-12 px-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 max-w-md mx-auto">
             <ImageIcon className="w-10 h-10 text-amber-500/60 mx-auto mb-3" />
-            <p className="text-sm font-bold text-zinc-200">Nenhuma imagem na galeria no momento.</p>
-            <p className="text-xs text-zinc-400 mt-1">O barbeiro pode adicionar fotos e vídeos dos trabalhos diretamente no painel administrativo.</p>
+            <p className="text-sm font-bold text-zinc-200">
+              Nenhuma imagem na galeria no momento.
+            </p>
+            <p className="text-xs text-zinc-400 mt-1">
+              O barbeiro pode adicionar fotos e vídeos dos trabalhos diretamente
+              no painel administrativo.
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {gallery.map((item) => (
               <div
                 key={item.id}
@@ -43,7 +49,7 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallery }) => {
                 className="group relative rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 cursor-pointer shadow-xl transition-all duration-300 hover:-translate-y-1"
               >
                 <div className="aspect-[4/3] bg-zinc-950 relative overflow-hidden">
-                  {item.type === 'image' ? (
+                  {item.type === "image" ? (
                     <img
                       src={item.url}
                       alt={item.title}
@@ -73,7 +79,7 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallery }) => {
                       </span>
                     )}
                     <span className="px-2 py-1 rounded-md bg-zinc-950/80 backdrop-blur-sm border border-zinc-800 text-zinc-300 text-[10px] font-bold uppercase tracking-wider">
-                      {item.type === 'video' ? 'Vídeo' : 'Foto'}
+                      {item.type === "video" ? "Vídeo" : "Foto"}
                     </span>
                   </div>
                 </div>
@@ -88,7 +94,6 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallery }) => {
             ))}
           </div>
         )}
-
       </div>
 
       {/* Media Lightbox Modal */}
@@ -102,8 +107,8 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallery }) => {
               <X className="w-6 h-6" />
             </button>
 
-            <div className="p-2 sm:p-4 bg-black flex items-center justify-center">
-              {activeMedia.type === 'video' ? (
+            <div className="p-2 sm:p-4 bg-zinc-950 flex items-center justify-center">
+              {activeMedia.type === "video" ? (
                 <video
                   src={activeMedia.url}
                   controls
@@ -124,7 +129,9 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ gallery }) => {
                 {activeMedia.title}
               </h3>
               <span className="text-xs text-amber-400 font-semibold uppercase">
-                {activeMedia.type === 'video' ? 'Vídeo da Barbearia' : 'Foto do Trabalho'}
+                {activeMedia.type === "video"
+                  ? "Vídeo da Barbearia"
+                  : "Foto do Trabalho"}
               </span>
             </div>
           </div>

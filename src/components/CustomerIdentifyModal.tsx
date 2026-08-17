@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { User, Phone, CheckCircle2, Scissors, ArrowRight } from 'lucide-react';
-import { Customer, ShopConfig } from '../types';
-import { api } from '../lib/api';
+import { ArrowRight, CheckCircle2, Phone, Scissors, User } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { localStore } from "../lib/storage";
+import type { Customer, ShopConfig } from "../types";
 
 interface CustomerIdentifyModalProps {
   config: ShopConfig;
@@ -15,16 +16,16 @@ export const CustomerIdentifyModal: React.FC<CustomerIdentifyModalProps> = ({
   isOpen,
   onSuccess,
 }) => {
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   if (!isOpen) return null;
 
   // Format Brazilian Phone Number automatically
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
+    let value = e.target.value.replace(/\D/g, "");
     if (value.length > 11) value = value.slice(0, 11);
 
     if (value.length > 6) {
@@ -37,28 +38,28 @@ export const CustomerIdentifyModal: React.FC<CustomerIdentifyModalProps> = ({
     setPhone(value);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || fullName.trim().length < 3) {
-      setError('Por favor, informe seu nome completo.');
+      setError("Por favor, informe seu nome completo.");
       return;
     }
-    const cleanPhone = phone.replace(/\D/g, '');
+    const cleanPhone = phone.replace(/\D/g, "");
     if (cleanPhone.length < 10) {
-      setError('Por favor, informe um número de WhatsApp válido com DDD.');
+      setError("Por favor, informe um número de WhatsApp válido com DDD.");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const customer = await api.identifyCustomer(fullName.trim(), phone);
+      const customer = localStore.identifyCustomer(fullName.trim(), phone);
       // Save locally for future visits
-      localStorage.setItem('barber_customer_data', JSON.stringify(customer));
+      localStorage.setItem("barber_customer_data", JSON.stringify(customer));
       onSuccess(customer);
     } catch (err: any) {
-      setError(err.message || 'Erro ao identificar cliente. Tente novamente.');
+      setError(err.message || "Erro ao identificar cliente. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -79,7 +80,7 @@ export const CustomerIdentifyModal: React.FC<CustomerIdentifyModalProps> = ({
             Identificação do Cliente
           </h2>
           <p className="text-xs text-zinc-400 mt-1">
-            Informe seus dados para prosseguir com os agendamentos na{' '}
+            Informe seus dados para prosseguir com os agendamentos na{" "}
             <span className="text-zinc-200 font-semibold">{config.name}</span>
           </p>
         </div>
@@ -124,7 +125,8 @@ export const CustomerIdentifyModal: React.FC<CustomerIdentifyModalProps> = ({
               />
             </div>
             <p className="text-[11px] text-zinc-500 mt-1">
-              Usado apenas para confirmação e envio dos seus lembretes pelo WhatsApp.
+              Usado apenas para confirmação e envio dos seus lembretes pelo
+              WhatsApp.
             </p>
           </div>
 

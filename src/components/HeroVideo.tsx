@@ -1,22 +1,43 @@
-import React, { useState } from 'react';
-import { Play, Volume2, VolumeX, Calendar, Sparkles, Scissors, MapPin, Clock, ShieldCheck } from 'lucide-react';
-import { ShopConfig } from '../types';
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Play,
+  Scissors,
+  ShieldCheck,
+  Sparkles,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import type { ShopConfig } from "../types";
 
 interface HeroVideoProps {
   config: ShopConfig;
   onOpenBooking: () => void;
 }
 
-export const HeroVideo: React.FC<HeroVideoProps> = ({ config, onOpenBooking }) => {
+export const HeroVideo: React.FC<HeroVideoProps> = ({
+  config,
+  onOpenBooking,
+}) => {
   const [isMuted, setIsMuted] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(true);
+
+  const rawWa = config.whatsapp
+    ? config.whatsapp.replace(/\D/g, "")
+    : "5567993106619";
+  const waNum = rawWa.startsWith("55") ? rawWa : `55${rawWa}`;
 
   return (
     <section className="relative bg-zinc-950 text-zinc-100 overflow-hidden pt-6 pb-12 sm:pb-20">
+      {/* Background Glow */}
+      <div className="absolute top-1/4 left-10 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-80 h-80 bg-amber-600/5 rounded-full blur-3xl pointer-events-none" />
+
       {/* Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          
           {/* Left Text Column */}
           <div className="lg:col-span-6 space-y-6 text-center lg:text-left z-10">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold tracking-wider uppercase">
@@ -37,38 +58,38 @@ export const HeroVideo: React.FC<HeroVideoProps> = ({ config, onOpenBooking }) =
             </p>
 
             {/* Badges / Highlights */}
-            <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs font-semibold text-zinc-300">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
+            <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-3 text-xs font-semibold text-zinc-300">
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800">
                 <Scissors className="w-4 h-4 text-amber-400" />
                 <span>Profissionais Especializados</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800">
                 <Clock className="w-4 h-4 text-amber-400" />
                 <span>Pontualidade Garantida</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800">
                 <ShieldCheck className="w-4 h-4 text-amber-400" />
                 <span>Pagamento Presencial</span>
               </div>
             </div>
 
             {/* Primary Action Callouts */}
-            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
               <button
                 onClick={onOpenBooking}
-                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-base uppercase tracking-wider shadow-2xl shadow-amber-500/25 hover:shadow-amber-500/40 transition-all transform active:scale-95 flex items-center justify-center gap-3"
+                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-black text-base uppercase tracking-wider shadow-2xl shadow-amber-500/25 hover:shadow-amber-500/40 transition-all transform active:scale-95 flex items-center justify-center gap-3 min-h-[50px]"
               >
                 <Calendar className="w-5 h-5" />
                 <span>Agendar Meu Horário</span>
               </button>
 
               <a
-                href={`https://wa.me/${config.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(
-                  `Olá! Gostaria de tirar dúvidas sobre os serviços da ${config.name}`
+                href={`https://wa.me/${waNum}?text=${encodeURIComponent(
+                  `Olá! Gostaria de tirar dúvidas sobre os serviços da ${config.name}`,
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto px-6 py-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 font-bold text-sm tracking-wide transition-all flex items-center justify-center gap-2 hover:border-amber-500/30"
+                className="w-full sm:w-auto px-6 py-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 font-bold text-sm tracking-wide transition-all flex items-center justify-center gap-2 hover:border-amber-500/40 min-h-[50px]"
               >
                 <span>Falar no WhatsApp</span>
               </a>
@@ -99,29 +120,33 @@ export const HeroVideo: React.FC<HeroVideoProps> = ({ config, onOpenBooking }) =
                 <div className="absolute bottom-4 right-4 flex items-center gap-2 z-20">
                   <button
                     onClick={() => setIsMuted(!isMuted)}
-                    className="p-2.5 rounded-full bg-zinc-950/80 hover:bg-zinc-900 border border-amber-500/30 text-amber-400 hover:text-amber-300 transition-all backdrop-blur-sm"
-                    title={isMuted ? 'Ativar Som' : 'Desativar Som'}
+                    className="p-2.5 rounded-full bg-black/90 hover:bg-zinc-900 border border-amber-500/30 text-amber-400 hover:text-amber-300 transition-all"
+                    title={isMuted ? "Ativar Som" : "Desativar Som"}
                   >
-                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                    {isMuted ? (
+                      <VolumeX className="w-4 h-4" />
+                    ) : (
+                      <Volume2 className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
 
                 {/* Video Title Overlay */}
                 <div className="absolute bottom-4 left-4 right-16 z-20 text-left">
-                  <span className="inline-block px-2 py-0.5 rounded bg-amber-500 text-zinc-950 text-[10px] font-black uppercase tracking-wider mb-1">
+                  <span className="inline-block px-2 py-0.5 rounded bg-amber-500 text-black text-[10px] font-black uppercase tracking-wider mb-1">
                     Vídeo em Destaque
                   </span>
-                  <h3 className="text-sm sm:text-base font-bold text-zinc-100 drop-shadow-md">
-                    {config.heroVideoTitle || 'Arte em Cortes & Estilo'}
+                  <h3 className="text-sm sm:text-base font-bold text-zinc-100">
+                    {config.heroVideoTitle || "Arte em Cortes & Estilo"}
                   </h3>
-                  <p className="text-xs text-zinc-300 font-light drop-shadow line-clamp-1">
-                    {config.heroVideoSubtitle || 'Confira a precisão dos nossos serviços.'}
+                  <p className="text-xs text-zinc-300 font-light line-clamp-1">
+                    {config.heroVideoSubtitle ||
+                      "Confira a precisão dos nossos serviços."}
                   </p>
                 </div>
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </section>
